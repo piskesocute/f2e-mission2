@@ -1,0 +1,27 @@
+[
+  {
+    "president": "蔡英文",
+    "vice_president": "賴清德",
+    "party": "民主進步黨",
+    "votes": "8,170,231",
+    "vote_percentage": "57.13",
+    "candidate_order": "3"
+  },
+  {
+    "president": "韓國瑜",
+    "vice_president": "張善政",
+    "party": "中國國民黨",
+    "votes": "5,522,119",
+    "vote_percentage": "38.61",
+    "candidate_order": "2"
+  },
+  {
+    "president": "宋楚瑜",
+    "vice_president": "余湘",
+    "party": "親民黨",
+    "votes": "608,590",
+    "vote_percentage": "4.26",
+    "candidate_order": "1"
+  }
+]
+
