@@ -3,9 +3,8 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
 import { ChevronDownIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps({
-  data: {
-    type: Array,
-    required: true
+  area: {
+    type: Array
   },
   defaultOption: {
     type: String,
@@ -13,7 +12,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['select-city']);
 const option = ref(null);
 const SELECTED_ITEM = computed(() => {
   if (option.value) {
@@ -22,9 +21,15 @@ const SELECTED_ITEM = computed(() => {
   return option.value || props.defaultOption;
 });
 const selectItem = (item) => {
-  option.value = item;
-  emit('update:modelValue', item);
+  option.value = item.area_name;
+  emit('select-city', item);
 };
+watch(
+  () => props.area,
+  (val) => {
+    console.log('val', val);
+  }
+);
 </script>
 
 <template>
@@ -34,7 +39,10 @@ const selectItem = (item) => {
         class="w-full inline-flex justify-center gap-x-8px border-1px border-#e6e6e6 rounded-8px border-solid bg-white px-12px py-4px shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50"
       >
         {{ SELECTED_ITEM }}
-        <ChevronDownIcon class="h-5 w-5 text-gray-400 -mr-1" aria-hidden="true" />
+        <ChevronDownIcon
+          class="ml-24px h-5 w-5 text-gray-400 -mr-1"
+          aria-hidden="true"
+        />
       </MenuButton>
     </div>
 
@@ -50,7 +58,11 @@ const selectItem = (item) => {
         class="absolute left-0 z-10 mt-2 h-20vh w-56 origin-top-right overflow-y-scroll rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
       >
         <div class="py-1">
-          <MenuItem v-slot="{ active }" v-for="item in data" :key="item">
+          <MenuItem
+            v-slot="{ active }"
+            v-for="item in area"
+            :key="item.prv_code + item.city_code"
+          >
             <a
               @click="selectItem(item)"
               href="#"
@@ -58,7 +70,7 @@ const selectItem = (item) => {
                 active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
                 'block px-4 py-2 text-sm'
               ]"
-              >{{ item }}</a
+              >{{ item.area_name }}</a
             >
           </MenuItem>
         </div>
