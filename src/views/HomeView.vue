@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue';
-
+import axios from 'axios';
 import VoteRateChart from '../components/VoteRateChart.vue';
 import voteData from '../assets/data/VoteRateOverview.json';
 import PresidentialVoterTurnout from '../assets/data/PresidentialVoterTurnout.json';
+import PartyVoteState from '../components/PartyVoteState.vue';
 
 const activeTab = ref(0);
 const tabs = [
@@ -53,10 +54,7 @@ const townData = ref([
     town: '竹北市,湖口鄉,新豐鄉,新埔鎮,關西鎮,芎林鄉,寶山鄉,竹東鎮,五峰鄉,橫山鄉,尖石鄉,北埔鄉,峨眉鄉'
   }
 ]);
-const citySelect = ref(null);
-const selectCity = (item) => {
-  citySelect.value = item;
-};
+
 const TOWN_DATA = computed(() => {
   if (citySelect.value) {
     return townData.value
@@ -65,10 +63,78 @@ const TOWN_DATA = computed(() => {
   }
   return [];
 });
+// 2020全國投票資料
+const taiwanVoteData = ref(null);
+const getVoteData = async () => {
+  const res = await axios.get(
+    'https://db.cec.gov.tw/static/elections/data/profiles/ELC/P0/00/1f7d9f4f6bfe06fdaf4db7df2ed4d60c/N/00_000_00_000_0000.json'
+  );
+  [taiwanVoteData.value] = res.data['00_000_00_000_0000'];
+};
 
-const selectTown = (item) => {
+const presidentialVoterTurnoutData = ref(null);
+const getPresidentialVoterTurnoutData = async () => {
+  const res = await axios.get(
+    'https://db.cec.gov.tw/static/elections/data/statistics/ticket_percents/ELC/P0/00/N/00_000_00_000_0000.json'
+  );
+  // console.log(res);
+  presidentialVoterTurnoutData.value = res.data[0].items
+    .filter((item) => item.vote_date === '2020-01-11')
+    .map((item) => {
+      return {
+        party_name: item.party_name,
+        ticket_percent: item.ticket_percent,
+        ticket_num: item.ticket_num
+      };
+    });
+  // console.log(presidentialVoterTurnoutData.value);
+};
+
+// 取得台灣縣市代碼
+// 63_000_00_000_0000台北
+const taiwanCityCode = ref([]);
+const getTaiwanCityCode = async () => {
+  const res = await axios.get(
+    'https://db.cec.gov.tw/static/elections/data/areas/ELC/P0/00/1f7d9f4f6bfe06fdaf4db7df2ed4d60c/C/00_000_00_000_0000.json'
+  );
+  taiwanCityCode.value = res.data['00_000_00_000_0000'];
+  console.log('data', taiwanCityCode);
+};
+// 選擇後城市item
+const citySelect = ref(null);
+const selectCity = async (item) => {
+  console.log(item);
+  citySelect.value = item;
+  await getTownCode();
+};
+
+// 取得鄉鎮市區代碼
+const townCode = ref([]);
+const getTownCode = async () => {
+  console.log('test');
+  const cityCode = citySelect.value.prv_code;
+  try {
+    const res = await axios.get(
+      `https://db.cec.gov.tw/static/elections/data/areas/ELC/P0/00/1f7d9f4f6bfe06fdaf4db7df2ed4d60c/D/${cityCode}_000_00_000_0000.json`
+    );
+    townCode.value = res.data[`${cityCode}_000_00_000_0000`];
+  } catch (error) {
+    console.log(error);
+  }
+};
+const selectTown = async (item) => {
   console.log(item);
 };
+
+const init = () => {
+  getVoteData();
+  getPresidentialVoterTurnoutData();
+  getTaiwanCityCode();
+};
+
+onMounted(() => {
+  init();
+});
 </script>
 
 <template>
@@ -79,7 +145,7 @@ const selectTown = (item) => {
   </nav>
   <main class="h-screen bg-main-primary px-48px py-40px font-noto">
     <div>
-      <div>
+      <div class="">
         <div class="flex gap-20px">
           <button
             class="cursor-pointer pb-12px text-20px text-20px font-semibold leading-24px font-inter font-noto text-#BFBFBF transition-colors duration-200 ease-in-out"
@@ -95,11 +161,8 @@ const selectTown = (item) => {
           </button>
         </div>
         <div class="mt-20px flex gap-20px">
-          <DropdownComponent @update:modelValue="selectCity" :data="city" />
-          <DropdownComponent
-            @update:modelValue="selectTown"
-            :data="TOWN_DATA"
-          />
+          <DropdownComponent @select-city="selectCity" :area="taiwanCityCode" />
+          <DropdownComponent :area="townCode" @select-city="selectTown" />
           <button
             type="button"
             class="flex items-center rounded-8px bg-nav-primary px-12px text-white"
@@ -112,97 +175,14 @@ const selectTown = (item) => {
             />
           </button>
         </div>
-        <div class="mt-40px w-270px gap-4">
-          <div class="left-card rounded-8px bg-white p-20px">
-            <div class="first-chart">
-              <h3 class="text-20px font-semibold leading-24px">投票概況</h3>
-              <div class="mb-20px flex">
-                <div class="w-50%">
-                  <VoteRateChart />
-                </div>
-                <div class="w-full flex flex-col items-start justify-center">
-                  <p class="text-20px font-semibold leading-24px">
-                    {{ voteData[0].VoterTurnout }}
-                  </p>
-                  <p class="text-16px font-normal leading-22px">投票率</p>
-                </div>
-              </div>
-              <div
-                class="flex flex-col gap-8px text-16px font-normal leading-22px"
-              >
-                <p>
-                  投票數
-                  <span class="text-12px font-semibold leading-17px"
-                    >{{ voteData[0].TotalVotes }}票</span
-                  >
-                </p>
-                <p>
-                  無效票數
-                  <span class="text-12px font-semibold leading-17px"
-                    >{{ voteData[0].InvalidVotes }}票</span
-                  >
-                </p>
-                <p>
-                  有效票數
-                  <span class="text-12px font-semibold leading-17px"
-                    >{{ voteData[0].ValidVotes }}票</span
-                  >
-                </p>
-              </div>
-            </div>
-            <div class="secend-chart mt-40px">
-              <div class="w-50%">
-                <PresidentialVoterTurnoutChart
-                  :data="PresidentialVoterTurnout"
-                />
-              </div>
-              <div class="mt-20px flex flex-col gap-8px">
-                <div
-                  v-for="item in PresidentialVoterTurnout"
-                  :key="item.candidate_order"
-                  class="w-100% flex gap-12px"
-                >
-                  <div
-                    class="h-24px w-24px flex items-center justify-center rounded-full text-center"
-                    :class="{
-                      'bg-#84CB98': item.candidate_order === '3',
-                      'bg-#8894D8': item.candidate_order === '2',
-                      'bg-#DFA175': item.candidate_order === '1'
-                    }"
-                  >
-                    <p class="text-12px font-semibold leading-17px text-white">
-                      {{ item.candidate_order }}
-                    </p>
-                  </div>
-                  <div class="flex gap-18px">
-                    <div class="w-84px">
-                      <p class="text-16px font-semibold leading-22px">
-                        {{ item.party }}
-                      </p>
-                      <p class="text-12px font-normal leading-17px">
-                        {{ item.president }} | {{ item.vice_president }}
-                      </p>
-                    </div>
-                    <div
-                      class="w-2px"
-                      :class="{
-                        'bg-#84CB98': item.candidate_order === '3',
-                        'bg-#8894D8': item.candidate_order === '2',
-                        'bg-#DFA175': item.candidate_order === '1'
-                      }"
-                    ></div>
-                  </div>
-                  <div>
-                    <p class="text-16px font-semibold leading-22px">
-                      {{ item.vote_percentage }}%
-                    </p>
-                    <p class="text-12px font-normal leading-17px">
-                      {{ item.votes }}票
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div class="mt-40px flex">
+          <PartyVoteState
+            :taiwanVoteData="taiwanVoteData"
+            :presidentialVoterTurnoutData="presidentialVoterTurnoutData"
+          />
+          <VoteMap />
+          <div class="">
+            <test />
           </div>
         </div>
       </div>
